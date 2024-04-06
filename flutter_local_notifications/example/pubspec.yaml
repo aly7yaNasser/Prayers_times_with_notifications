@@ -1,0 +1,65 @@
+name: flutter_local_notifications_example
+description: Demonstrates how to use the flutter_local_notifications plugin.
+publish_to: none
+
+dependencies:
+  cupertino_icons: ^1.0.2
+  flutter:
+    sdk: flutter
+  flutter_local_notifications:
+    path: ../
+  flutter_localizations:
+    sdk: flutter
+  localization: ^2.1.0
+  flutter_bloc: ^8.1.3
+  shared_preferences: ^2.2.1
+  hive: 2.2.3
+  hive_flutter: 1.1.0
+  http: ^0.13.6
+  geolocator: ^10.0.1
+  logging_to_logcat: ^1.0.0
+  geocoder2: ^1.4.0
+  geocoding: ^2.1.0
+  fluttertoast: ^8.2.2
+  connectivity_plus: ^4.0.2
+  permission_handler: ^11.3.0
+  url_launcher: ^6.1.14
+  flutter_native_splash: ^2.3.3
+  devicelocale: ^0.7.0
+  device_info_plus: ^9.1.0
+  workmanager: ^0.5.1
+  flutter_timezone: ^1.0.8
+  auto_start_flutter: ^0.1.1
+#  notification_permissions: ^0.6.1
+
+
+dev_dependencies:
+  flutter_driver:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  hive_generator: 2.0.1
+  build_runner: 2.4.6
+  flutter_lints: ^2.0.0
+
+# The following overrides exist to ensure the example app builds with the latest code
+# of these packages as part of CI
+dependency_overrides:
+  flutter_local_notifications_linux:
+    path: ../../flutter_local_notifications_linux
+  flutter_local_notifications_platform_interface:
+    path: ../../flutter_local_notifications_platform_interface
+
+flutter:
+  uses-material-design: true
+  assets:
+    - lib/languages/en.json
+    - lib/languages/ar.json
+#    - assets/main_background.jpg
+    - sound/
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+  flutter: ">=2.8.0"

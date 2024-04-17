@@ -308,7 +308,7 @@ class PaddedElevatedButton extends StatelessWidget {
                                       child: Align(
                                           alignment: Alignment.center,
                                           child: Text(
-                                            "notification".tr(context),
+                                            "notifications".tr(context),
                                             style: TextStyle(fontSize: 18),
                                           )),
                                     ),

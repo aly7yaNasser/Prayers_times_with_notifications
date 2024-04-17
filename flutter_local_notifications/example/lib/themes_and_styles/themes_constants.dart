@@ -4,10 +4,11 @@ import 'package:flutter_local_notifications_example/themes_and_styles/styles_con
 ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
   useMaterial3: true,
+
   extensions: <ThemeExtension<dynamic>>{
     PrayerTimeTextStyle(
+      textStyle: TextStyle(fontSize: 23),
       fontSize: 40,
-      textStyle: TextStyle(fontSize: 20),
     )
   },
   appBarTheme: AppBarTheme(
@@ -72,8 +73,8 @@ ThemeData darkTheme = ThemeData(
     onTertiaryContainer: Colors.black),
   extensions: <ThemeExtension<dynamic>>{
     PrayerTimeTextStyle(
+      textStyle: TextStyle(fontSize: 23),
       fontSize: 40,
-      textStyle: TextStyle(fontSize: 20, ),
     )
   },
   textButtonTheme: TextButtonThemeData(

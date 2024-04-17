@@ -23,6 +23,14 @@ class PrayerTimeWidget extends StatelessWidget{
     // double fontSize = style?.fontSize ?? defaultStyle?.fontSize;
     TextStyle textStyle = style?.textStyle ?? defaultStyle?.textStyle;
 
+    if(style != null) {
+      log('costum Style: no');
+      log('defulte Style: yes');
+    }else{
+      log('costum Style: no');
+      log('defulte Style: yes');
+    }
+
     // return FutureBuilder(
       // builder: (BuildContext ctx, AsyncSnapshot<int> snapshot) {
 
@@ -41,7 +49,8 @@ class PrayerTimeWidget extends StatelessWidget{
                 if (timeFormatState.timeFormat == 12) {
                   String hoursStr = time.toString().substring(0, 2);
                   // log('hoursStr: ${hoursStr}');
-                  int hours = int.parse(hoursStr) % 12;
+                  int parseHours = int.parse(hoursStr) % 12;
+                  int hours = parseHours == 0 ? 1:parseHours;
                   String mins = time.toString().substring(2);
 
                   timeResult = hours.toString() + mins;

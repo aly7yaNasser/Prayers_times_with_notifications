@@ -76,11 +76,12 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
               notifyOption = NotifyChangedState.NOTIFY_DISABLED;
             }
 
-            if (isGranted) {
-              log('notifStart isGranted3: ${isGranted}');
-              await runNotifications();
-            }
+
           });
+        }
+        if (isGranted) {
+          log('notifStart isGranted3: ${isGranted}');
+          await runNotifications();
         }
       }
 

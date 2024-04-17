@@ -254,7 +254,8 @@ class PrayerTime {
         sound: RawResourceAndroidNotificationSound('prayer_time_norify_sound'),
         importance: Importance.max,
       priority: Priority.max,
-            timeoutAfter: 1000 * 60 * 9)),
+            // timeoutAfter: 1000 * 60 * 9
+            )),
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
         UILocalNotificationDateInterpretation.absoluteTime,

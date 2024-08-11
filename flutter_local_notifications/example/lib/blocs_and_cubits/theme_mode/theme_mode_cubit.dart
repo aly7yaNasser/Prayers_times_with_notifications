@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/src/material/theme_data.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_local_notifications_example/blocs_and_cubits/theme_mode/theme_mode_state.dart';
@@ -10,10 +11,15 @@ import '../../shared_preferemces/theme_data_helper.dart';
 
 
 class ThemeModeCubit extends Cubit<ThemeModeChangedState> {
-  ThemeModeCubit() : super(ThemeModeChangedState( theme: 'light'));
+  ThemeModeCubit() : super(ThemeModeChangedState( theme: 'init'));
 
   changedTheme(String theme) async {
     log('theme: ${theme}');
+    if (theme == 'init' || theme == 'auto') {
+      var brightness = SchedulerBinding.instance.platformDispatcher
+          .platformBrightness;
+      theme = brightness == Brightness.dark? 'dark':'light';
+    }
   await themeHelper().cacheTheme(theme);
   emit(ThemeModeChangedState(theme: theme));
   }

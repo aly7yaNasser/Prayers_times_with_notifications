@@ -1,17 +1,23 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:convert';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications_example/shared_preferemces/location_helper.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications_example/services/notification_service.dart';
+import 'package:logger/logger.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -22,6 +28,7 @@ import 'package:intl/intl.dart';
 
 import 'blocs_and_cubits/Internet/internet_bloc.dart';
 import 'blocs_and_cubits/locale_cubit/locale_cubit.dart';
+import 'blocs_and_cubits/location/location_bloc.dart';
 import 'blocs_and_cubits/prayer_times_api/prayer_time_api_bloc.dart';
 import 'blocs_and_cubits/theme_mode/theme_mode_cubit.dart';
 import 'blocs_and_cubits/theme_mode/theme_mode_state.dart';
@@ -29,7 +36,14 @@ import 'blocs_and_cubits/time_format/time_format_cubit.dart';
 import 'delegates/app_localization.dart';
 import 'general/general_static.dart';
 import 'models/prayer_time.dart';
-import 'shared_preferemces/locale_helper.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+var logger = Logger(
+  printer: PrettyPrinter(),
+);
+
+var loggerNoStack = Logger(
+  printer: PrettyPrinter(methodCount: 0),
+);
 
 int id = 0;
 
@@ -130,6 +144,7 @@ void _configureDidReceiveLocalNotificationSubject() {
     );
   });
 }
+
 @pragma('vm:entry-point')
 void _configureSelectNotificationSubject() {
   BuildContext? context;
@@ -140,9 +155,10 @@ void _configureSelectNotificationSubject() {
     ));
   });
 }
+
 @pragma('vm:entry-point')
 Future<void> _configureLocalTimeZone() async {
-  log('tz init1');
+  // log('tz init1');
 
   if (kIsWeb || Platform.isLinux) {
     return;
@@ -150,347 +166,232 @@ Future<void> _configureLocalTimeZone() async {
   tz.initializeTimeZones();
   final String? timeZoneName = await FlutterTimezone.getLocalTimezone();
   tz.setLocalLocation(tz.getLocation(timeZoneName!));
-  log('tz init2');
+  // log('tz init2');
+  // var tz1 = tz.TZDateTime;
+  // log("tz1: $tz1");
+  //   var tz2 = tz.TZDateTime.now(tz.local);
+  // log("tz2: $tz2");
+  //   var tz3 = tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1));
+  // log("tz3: $tz3");
+  // await flutterLocalNotificationsPlugin.zonedSchedule(
+  //     0,
+  //     'scheduled title',
+  //     'scheduled body',
+  //     tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
+  //     333333333,
+  //     const NotificationDetails(
+  //       android: AndroidNotificationDetails(
+  //         'your channel id', 'your channel name',
+  //         channelDescription: 'your channel description',
+  //         // sound: RawResourceAndroidNotificationSound('prayer_time_norify_sound'),
+  //       ),
+  //     ),
+  //     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  //     uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation
+  //         .absoluteTime);
 }
+
 @pragma('vm:entry-point')
 void callbackDispatcher() {
-  Workmanager().executeTask((task, inputdata) async {
+  Workmanager()
+      .executeTask((String task, Map<String, dynamic>? inputdata) async {
     try {
       String lunchTime = DateFormat('hh:mm:ss').format(DateTime.now());
 
-      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-          FlutterLocalNotificationsPlugin();
-
-      /// Streams are created so that app can respond to notification-related events
-      /// since the plugin is initialised in the `main` function
-      final StreamController<ReceivedNotification>
-          didReceiveLocalNotificationStream =
-          StreamController<ReceivedNotification>.broadcast();
-
-      final StreamController<String?> selectNotificationStream =
-          StreamController<String?>.broadcast();
-
-      /// A notification action which triggers a App navigation event
-      const String navigationActionId = 'id_3';
-
-      /// Defines a iOS/MacOS notification category for text input actions.
-      const String darwinNotificationCategoryText = 'textCategory';
-
-      /// Defines a iOS/MacOS notification category for plain actions.
-      const String darwinNotificationCategoryPlain = 'plainCategory';
-
-      await WidgetsFlutterBinding.ensureInitialized();
-
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('ic_launcher');
-
-      final List<DarwinNotificationCategory> darwinNotificationCategories =
-          <DarwinNotificationCategory>[
-        DarwinNotificationCategory(
-          darwinNotificationCategoryText,
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.text(
-              'text_1',
-              'Action 1',
-              buttonTitle: 'Send',
-              placeholder: 'Placeholder',
-            ),
-          ],
-        ),
-        DarwinNotificationCategory(
-          darwinNotificationCategoryPlain,
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.plain('id_1', 'Action 1'),
-            DarwinNotificationAction.plain(
-              'id_2',
-              'Action 2 (destructive)',
-              options: <DarwinNotificationActionOption>{
-                DarwinNotificationActionOption.destructive,
-              },
-            ),
-            DarwinNotificationAction.plain(
-              navigationActionId,
-              'Action 3 (foreground)',
-              options: <DarwinNotificationActionOption>{
-                DarwinNotificationActionOption.foreground,
-              },
-            ),
-            DarwinNotificationAction.plain(
-              'id_4',
-              'Action 4 (auth required)',
-              options: <DarwinNotificationActionOption>{
-                DarwinNotificationActionOption.authenticationRequired,
-              },
-            ),
-          ],
-          options: <DarwinNotificationCategoryOption>{
-            DarwinNotificationCategoryOption.hiddenPreviewShowTitle,
-          },
-        )
-      ];
-
-      /// Note: permissions aren't requested here just to demonstrate that can be
-      /// done later
-      final DarwinInitializationSettings initializationSettingsDarwin =
-          DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
-        onDidReceiveLocalNotification:
-            (int id, String? title, String? body, String? payload) async {
-          didReceiveLocalNotificationStream.add(
-            ReceivedNotification(
-              id: id,
-              title: title,
-              body: body,
-              payload: payload,
-            ),
-          );
-        },
-        notificationCategories: darwinNotificationCategories,
-      );
-      final LinuxInitializationSettings initializationSettingsLinux =
-          LinuxInitializationSettings(
-        defaultActionName: 'Open notification',
-        defaultIcon: AssetsLinuxIcon('icons/app_icon.png'),
-      );
-      final InitializationSettings initializationSettings =
-          InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsDarwin,
-        macOS: initializationSettingsDarwin,
-        linux: initializationSettingsLinux,
-      );
-
-      await flutterLocalNotificationsPlugin.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse:
-            (NotificationResponse notificationResponse) {
-          switch (notificationResponse.notificationResponseType) {
-            case NotificationResponseType.selectedNotification:
-              selectNotificationStream.add(notificationResponse.payload);
-              break;
-            case NotificationResponseType.selectedNotificationAction:
-              if (notificationResponse.actionId == navigationActionId) {
-                selectNotificationStream.add(notificationResponse.payload);
-              }
-              break;
-          }
-        },
-        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-      );
-
+     await initNotificatin();
       // String lang = await LocaleHelper().getCachedLanguageCode();
       // log('lng:$lang');
       // await NotificationService()
       //     .showNotification(title: 'Prayer Time', body: lang, id: 0);
-
-      // await NotificationService()
-      //     .showNotification(title: 'Prayer Time', body: '1', id: 11);
+      DateTime now = DateTime.now();
+      // String formattedDate = DateFormat('kk:mm:ss \n EEE d MMM').format(now);
+      // await NotificationService().showNotification(
+      //     title: 'Prayer Time', body: ' $task $formattedDate', id: 11);
 
       await initHive();
-      // await NotificationService()
-      //     .showNotification(title: 'Prayer Time', body: '2', id: 12);
 
       log('task');
-
-      // await NotificationService()
-      //     .showNotification(title: 'Prayer Time', body: '3', id: 13);
+      await schedulePTs();
 
       var prayerTimeBox = await Hive.openBox(PrayerTimeApiBloc.prayerTimeKey);
       List boxList = [];
-      List<PrayerTime> prayerTimes = [];
-
-      // await NotificationService()
-      //     .showNotification(title: 'Prayer Time', body: '4', id: 14);
-
+      List<PrayerTime> prayerTimes = [
+        // PrayerTime(date: Date(readable: 'hhh'))
+      ];
       boxList = await (prayerTimeBox
           .get(PrayerTimeApiBloc.prayerTimeKey, defaultValue: []));
-
-      // await NotificationService()
-      //     .showNotification(title: 'Prayer Time', body: '5', id: 15);
+      // log('test boxList Empty length ${boxList.length}');
 
       prayerTimes = List<PrayerTime>.from(boxList);
-      DateTime now = DateTime.now();
-      var launchDate = DateFormat('dd MMM yyyy').format(now);
-      // log('lunchDate: $launchDate');
+      // log('text Box : date ${prayerTimes[0].date!.readable}');
+      // log('test not Empty length ${prayerTimes.length}');
 
-      var nextDayDateForPT = DateFormat('dd MMM yyyy')
-          .format(DateTime(now.year, now.month, now.day + 1));
+      // prayerTimes.addAll(prayerTimes);
+      if (prayerTimes.length < 60) {
+      // if (now.month == DateTime.december && now.day >= 20) {
 
-      var next2DayDateForPT = DateFormat('dd MMM yyyy')
-          .format(DateTime(now.year, now.month, now.day + 2));
-
-      var nextDayDateForDaily = DateFormat('yyyy-MM-dd')
-          .format(DateTime(now.year, now.month, now.day + 1));
-      String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-      // log('nextDayDate: $nextDayDateForPT');
-
-      // DateTime firstDailySchedule =
-      //     DateTime.parse(nextDayDateForDaily + ' ' + '02:00:00.000');
-      // log('firstDailySchedule:  ${firstDailySchedule.year}/${firstDailySchedule.month}/${firstDailySchedule.day} ${firstDailySchedule.hour}:${firstDailySchedule.minute}');
-      // log('firstDailySchedule ${firstDailySchedule.millisecondsSinceEpoch}');
-      //
-      // DateTime secondDailySchedule =
-      //     DateTime.parse(nextDayDateForDaily + ' ' + '14:00:00.000');
-      // log('secondDailySchedule:  ${secondDailySchedule.year}/${secondDailySchedule.month}/${secondDailySchedule.day} ${secondDailySchedule.hour}:${secondDailySchedule.minute}');
-      // log('secondDailySchedule ${secondDailySchedule.millisecondsSinceEpoch}');
-
-      if (prayerTimes.isNotEmpty) {
-
-        // await NotificationService()
-        //     .showNotification(title: 'Prayer Time', body: '6', id: 16);
-
-        log('lunchDate: $launchDate');
-
-        PrayerTime currentPrayerTime = prayerTimes.firstWhere(
-            (PrayerTime prayerTime) => prayerTime.date!.readable == launchDate);
-
-        // await NotificationService()
-        //     .showNotification(title: 'Prayer Time', body: '7', id: 17);
-        // await Workmanager().cancelAll();
-        bool isScheduled = false;
-        if (currentPrayerTime != null) {
-          // isScheduled =
-          await currentPrayerTime.scheduleNotifications();
-          log('isScheduled 1: $isScheduled');
+          await loadNextYear();
         }
-          // await NotificationService()
-          //     .showNotification(title: 'Prayer Time', body: '8', id: 18);
-          // if (!isScheduled) {
 
-            // await NotificationService()
-            //     .showNotification(title: 'Prayer Time', body: '9', id: 19);
 
-            log('before getting Next Day');
-             currentPrayerTime = prayerTimes.firstWhere(
-                (PrayerTime prayerTime) =>
-                    prayerTime.date!.readable == nextDayDateForPT);
-            log('after getting Next Day');
-        if (currentPrayerTime != null) {
-          // isScheduled =
-          await currentPrayerTime.scheduleNotifications();
-          log('isScheduled 2: $isScheduled');
+      if (Platform.isAndroid) {
+        var androidInfo = await DeviceInfoPlugin().androidInfo;
+        // var release = androidInfo.version.release;
+        var sdkInt = androidInfo.version.sdkInt;
+        // var manufacturer = androidInfo.manufacturer;
+        // var model = androidInfo.model;
+        // print('Android $release (SDK $sdkInt), $manufacturer $model');
+        // Android 9 (SDK 28), Xiaomi Redmi Note 7
+        if (sdkInt > 21) {
+          if (task == 'init00') {
+            await Workmanager().registerPeriodicTask(
+              "load",
+              "load",
+              initialDelay:
+              Duration(days: 2 // firstDailySchedule.millisecondsSinceEpoch -
+                //now.millisecondsSinceEpoch
+              ),
+              constraints: Constraints(
+                  networkType: NetworkType.not_required,
+                  requiresDeviceIdle: false,
+                  requiresBatteryNotLow: true,
+                  requiresStorageNotLow: true,
+                  requiresCharging: false),
+              existingWorkPolicy: ExistingWorkPolicy.keep,
+              frequency: Duration(minutes: 16),
+            );
+          }
+        }else {
+
+          String taskStrInit = task.substring(4, 5);
+          int taskInt = int.parse(taskStrInit);
+          if (taskInt > 998)
+            taskInt = -1;
+          taskInt++;
+          String taskStr = task.substring(0, 3) + taskInt.toString();
+          logger.e('newTsakName $taskStr');
+          await Workmanager().registerOneOffTask(
+            taskStr,
+            taskStr,
+            initialDelay: Duration(days: 2),
+            constraints: Constraints(
+                networkType: NetworkType.not_required,
+                requiresDeviceIdle: false,
+                requiresBatteryNotLow: false,
+                requiresStorageNotLow: false,
+                requiresCharging: false),
+            existingWorkPolicy: ExistingWorkPolicy.update,
+          );
+          await NotificationService().showNotification(
+              title: 'Prayer Time', body: ' newxt is$taskStr ', id: 777);
+
         }
-          log('before getting Next Day 2');
-          currentPrayerTime = prayerTimes.firstWhere(
-                  (PrayerTime prayerTime) =>
-              prayerTime.date!.readable == next2DayDateForPT);
-          log('after getting Next Day 2');
-        if (currentPrayerTime != null) {
-          // isScheduled =
-          await currentPrayerTime.scheduleNotifications();
-          log('isScheduled 3: $isScheduled');
-        }
-            // await NotificationService()
-            //     .showNotification(title: 'Prayer Time', body: '11', id: 111);
-          // }
-
-          // await NotificationService()
-          //     .showNotification(title: 'Prayer Time', body: '10', id: 100);
-
-        // }
-        // await NotificationService()
-        //     .showNotification(title: 'Prayer Time', body: task, id: 200);
-
-        // if (task == 'init2') {
-          Workmanager().registerOneOffTask(
-            "init1",
-            "init1",
-            initialDelay: Duration(
-                hours: 3// firstDailySchedule.millisecondsSinceEpoch -
-                    //now.millisecondsSinceEpoch
-                ),
-            constraints: Constraints(
-                networkType: NetworkType.not_required,
-                requiresDeviceIdle: false,
-                requiresBatteryNotLow: false,
-                requiresStorageNotLow: false),
-            existingWorkPolicy: ExistingWorkPolicy.replace,
-          );
-        // }else{
-          Workmanager().registerOneOffTask(
-            "init2",
-            "init2",
-            initialDelay: Duration(
-                hours: 15 //secondDailySchedule.millisecondsSinceEpoch -
-                    //now.millisecondsSinceEpoch
-                ),
-            constraints: Constraints(
-                networkType: NetworkType.not_required,
-                requiresDeviceIdle: false,
-                requiresBatteryNotLow: false,
-                requiresStorageNotLow: false),
-            existingWorkPolicy: ExistingWorkPolicy.replace,
-          );
-
-          Workmanager().registerOneOffTask(
-            "init3",
-            "init3",
-            initialDelay: Duration(
-                hours: 26 //secondDailySchedule.millisecondsSinceEpoch -
-              //now.millisecondsSinceEpoch
-            ),
-            constraints: Constraints(
-                networkType: NetworkType.not_required,
-                requiresDeviceIdle: false,
-                requiresBatteryNotLow: false,
-                requiresStorageNotLow: false),
-            existingWorkPolicy: ExistingWorkPolicy.replace,
-          );
-
-          Workmanager().registerOneOffTask(
-            "init4",
-            "init4",
-            initialDelay: Duration(
-                hours: 39 //secondDailySchedule.millisecondsSinceEpoch -
-              //now.millisecondsSinceEpoch
-            ),
-            constraints: Constraints(
-                networkType: NetworkType.not_required,
-                requiresDeviceIdle: false,
-                requiresBatteryNotLow: false,
-                requiresStorageNotLow: false),
-            existingWorkPolicy: ExistingWorkPolicy.replace,
-          );
-        // }
       }
+        log('workMan taskName: $task');
+        // await NotificationService().showNotification(
+        //     title: 'Prayer Time', body: ' $task $formattedDate done', id: 111);
 
-      log('workMan taskName: $task');
+        return Future.value(true);
 
-      return Future.value(true);
     } catch (err) {
-      log('quietError :${err.toString()}'); // Logger flutter package, prints error on the debug console
+      logger.e(
+          'quietError :${err}'); // Logger flutter package, prints error on the debug console
+      await NotificationService().showNotification(
+          title: 'Prayer Time', body: 'Error ${err.toString()}', id: 404);
       throw Exception(err);
     }
   });
 }
 
+
 void main() async {
+  WidgetsBinding widgetsBinding = await WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  // Future.delayed(Duration(seconds: 2)).then((v){
+    runApp(MyApp());
+
+    FlutterNativeSplash.remove();
+
+  // });
+  Workmanager()
+      .initialize(callbackDispatcher, isInDebugMode: true)
+      .then((value) async {
+    Workmanager().cancelAll().then((value) async {
+      // await WidgetsFlutterBinding.ensureInitialized();
+
+      HttpOverrides.global = await MyHttpOverrides();
+
+    });
+  });
   await initHive();
+
+
+  await initNotificatin();
+  await _configureLocalTimeZone();
+
+
+}
+
+class HomePage {
+  static var routeName;
+}
+
+initHive() async {
+  await Hive.initFlutter();
+  if (!Hive.isAdapterRegistered(1)) {
+    Hive.registerAdapter(PrayerTimeAdapter());
+  }
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(DateAdapter());
+  }
+  if (!Hive.isAdapterRegistered(3)) {
+    Hive.registerAdapter(GregorianAdapter());
+  }
+  if (!Hive.isAdapterRegistered(5)) {
+    Hive.registerAdapter(HijriAdapter());
+  }
+  if (!Hive.isAdapterRegistered(6)) {
+    Hive.registerAdapter(WeekdayAdapter());
+  }
+  if (!Hive.isAdapterRegistered(7)) {
+    Hive.registerAdapter(MonthAdapter());
+  }
+  if (!Hive.isAdapterRegistered(4)) {
+    Hive.registerAdapter(DesignationAdapter());
+  }
+}
+
+
+
+initNotificatin() async{
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+
+  /// Streams are created so that app can respond to notification-related events
+  /// since the plugin is initialised in the `main` function
+  final StreamController<ReceivedNotification>
+  didReceiveLocalNotificationStream =
+  StreamController<ReceivedNotification>.broadcast();
+
+  final StreamController<String?> selectNotificationStream =
+  StreamController<String?>.broadcast();
+
+  /// A notification action which triggers a App navigation event
+  const String navigationActionId = 'id_3';
+
+  /// Defines a iOS/MacOS notification category for text input actions.
+  const String darwinNotificationCategoryText = 'textCategory';
+
+  /// Defines a iOS/MacOS notification category for plain actions.
+  const String darwinNotificationCategoryPlain = 'plainCategory';
 
   await WidgetsFlutterBinding.ensureInitialized();
 
-  final NotificationAppLaunchDetails? notificationAppLaunchDetails = !kIsWeb &&
-          Platform.isLinux
-      ? null
-      : await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
-  String? initialRoute = HomePage.routeName;
-  if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
-    selectedNotificationPayload =
-        notificationAppLaunchDetails!.notificationResponse?.payload;
-    initialRoute = SecondPage.routeName;
-  }
-
-  _configureDidReceiveLocalNotificationSubject();
-  _configureSelectNotificationSubject();
-
   const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('ic_launcher');
+  AndroidInitializationSettings('ic_launcher');
 
   final List<DarwinNotificationCategory> darwinNotificationCategories =
-      <DarwinNotificationCategory>[
+  <DarwinNotificationCategory>[
     DarwinNotificationCategory(
       darwinNotificationCategoryText,
       actions: <DarwinNotificationAction>[
@@ -537,7 +438,7 @@ void main() async {
   /// Note: permissions aren't requested here just to demonstrate that can be
   /// done later
   final DarwinInitializationSettings initializationSettingsDarwin =
-      DarwinInitializationSettings(
+  DarwinInitializationSettings(
     requestAlertPermission: false,
     requestBadgePermission: false,
     requestSoundPermission: false,
@@ -555,11 +456,12 @@ void main() async {
     notificationCategories: darwinNotificationCategories,
   );
   final LinuxInitializationSettings initializationSettingsLinux =
-      LinuxInitializationSettings(
+  LinuxInitializationSettings(
     defaultActionName: 'Open notification',
     defaultIcon: AssetsLinuxIcon('icons/app_icon.png'),
   );
-  final InitializationSettings initializationSettings = InitializationSettings(
+  final InitializationSettings initializationSettings =
+  InitializationSettings(
     android: initializationSettingsAndroid,
     iOS: initializationSettingsDarwin,
     macOS: initializationSettingsDarwin,
@@ -583,44 +485,156 @@ void main() async {
     },
     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
   );
-  await _configureLocalTimeZone();
 
-  Workmanager().cancelAll().then((value) async {
-    // Workmanager()
-    //     .initialize(callbackDispatcher, isInDebugMode: false)
-    //     .then((value) async {
-
-      runApp(MyApp());
-    // });
-  });
 }
 
-class HomePage {
-  static var routeName;
+
+
+Future schedulePTs() async {
+  var prayerTimeBox = await Hive.openBox(PrayerTimeApiBloc.prayerTimeKey);
+  List boxList = [];
+  List<PrayerTime> prayerTimes = [];
+  DateTime now = DateTime.now();
+
+  var launchDate = DateFormat('dd MMM yyyy').format(now);
+  // log('lunchDate: $launchDate');
+
+  var nextDayDateForPT = DateFormat('dd MMM yyyy')
+      .format(DateTime(now.year, now.month, now.day + 1));
+
+  var next2DayDateForPT = DateFormat('dd MMM yyyy')
+      .format(DateTime(now.year, now.month, now.day + 2));
+
+  var nextDayDateForDaily = DateFormat('yyyy-MM-dd')
+      .format(DateTime(now.year, now.month, now.day + 1));
+
+  String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  boxList = await (prayerTimeBox
+      .get(PrayerTimeApiBloc.prayerTimeKey, defaultValue: []));
+
+  prayerTimes = List<PrayerTime>.from(boxList);
+
+  if (prayerTimes.isNotEmpty) {
+    PrayerTime currentPrayerTime = prayerTimes.firstWhere(
+            (PrayerTime prayerTime) => prayerTime.date!.readable == launchDate);
+
+    // await flutterLocalNotificationsPlugin.reScheduleNotification();
+
+    bool isScheduled = false;
+    if (currentPrayerTime != null) {
+      // isScheduled =
+      await currentPrayerTime.scheduleNotifications();
+      // log('isScheduled 1: $isScheduled');
+    }
+
+    currentPrayerTime = prayerTimes.firstWhere((PrayerTime prayerTime) =>
+    prayerTime.date!.readable == nextDayDateForPT);
+    if (currentPrayerTime != null) {
+      // isScheduled =
+      await currentPrayerTime.scheduleNotifications();
+      // log('isScheduled 2: $isScheduled');
+    }
+    // log('before getting Next Day 2');
+    currentPrayerTime = prayerTimes.firstWhere((PrayerTime prayerTime) =>
+    prayerTime.date!.readable == next2DayDateForPT);
+    // log('after getting Next Day 2');
+    if (currentPrayerTime != null) {
+      // isScheduled =
+      await currentPrayerTime.scheduleNotifications();
+      // log('isScheduled 3: $isScheduled');
+    }
+
+    List<PendingNotificationRequest> pendignList = await NotificationService()
+        .notificationsPlugin
+        .pendingNotificationRequests();
+
+    // await NotificationService().showNotification(
+    //     title: 'Prayer Time', body: 'Count ${pendignList.length}', id: 505);
+
+
+
+  }
+
 }
 
-initHive() async {
-  await Hive.initFlutter();
-  if (!Hive.isAdapterRegistered(1)) {
-    Hive.registerAdapter(PrayerTimeAdapter());
-  }
-  if (!Hive.isAdapterRegistered(2)) {
-    Hive.registerAdapter(DateAdapter());
-  }
-  if (!Hive.isAdapterRegistered(3)) {
-    Hive.registerAdapter(GregorianAdapter());
-  }
-  if (!Hive.isAdapterRegistered(5)) {
-    Hive.registerAdapter(HijriAdapter());
-  }
-  if (!Hive.isAdapterRegistered(6)) {
-    Hive.registerAdapter(WeekdayAdapter());
-  }
-  if (!Hive.isAdapterRegistered(7)) {
-    Hive.registerAdapter(MonthAdapter());
-  }
-  if (!Hive.isAdapterRegistered(4)) {
-    Hive.registerAdapter(DesignationAdapter());
+Future loadNextYear() async {
+  DateTime now = DateTime.now();
+  var year = DateFormat('yyyy').format(DateTime(now.year));
+  var nextYear = DateFormat('yyyy').format(DateTime(now.year + 1));
+
+  final String? country, city;
+  var url;
+  List<String>? countryAndCity =
+  await LocationHelper().getCachedCountryAndCity();
+  country = countryAndCity![0];
+  city = countryAndCity![1];
+  if (country != null && city != null) {
+    bool loaded = false;
+    late Box prayerTimeBox;
+    if (now.month == DateTime.december) {
+      // log('getPrayerTimes year: ${nextYear}, country: ${country}, city: ${city}');
+      url = Uri.https(
+          PrayerTimeApiBloc.url_base,
+          'v1/calendarByCity/${nextYear}',
+          {'method': '4', 'country': country, 'city': city});
+    } else {
+      // log('getPrayerTimes year: ${year}, country: ${country}, city: ${city}');
+      url = Uri.https(PrayerTimeApiBloc.url_base, 'v1/calendarByCity/${year}',
+          {'method': '4', 'country': country, 'city': city});
+    }
+    log('url: ${url}');
+    var response = await http.get(url);
+    if (response != null) {
+      log('response: ${response}');
+    }
+    print('Response status: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      // print('Response body: ${response.body}');
+
+      Map<String, dynamic> months = jsonDecode(response.body)['data'];
+      log('months count: ${months.length}');
+      List<PrayerTime> list = [];
+      List<dynamic> days;
+      String currentDate = DateFormat('dd MMM yyyy').format(DateTime.now());
+      int fullDayTimstamp = (1000 * 60 * 60 * 24);
+      PrayerTime prayerTime = PrayerTime();
+      bool foundToday = false;
+
+      months.forEach((key, value) {
+        // log('${key}:: ${value}');
+        days = value as List;
+        for (var day in days) {
+          String prayerTimeDate = day['date']['readable'];
+          // log('day : ${prayerTimeDate}, current day:${currentDate}');
+          if (foundToday) {
+            prayerTime = PrayerTime.fromJson(day["timings"]);
+            prayerTime.date = Date.fromJson(day['date']);
+            // log('added PrayerTime ${prayerTime.date!.readable}');
+
+            list.add(prayerTime);
+          } else if (prayerTimeDate == currentDate) {
+            prayerTime = PrayerTime.fromJson(day["timings"]);
+            prayerTime.date = Date.fromJson(day['date']);
+            // log('added PrayerTime ${prayerTime.date!.readable}');
+
+            list.add(prayerTime);
+            foundToday = true;
+          }
+        }
+      });
+      // log('date: ${list[0].date!.gregorian!.weekday!.en!}');
+      //
+      // log('fajer: ${list[0].fajr}');
+      // log('date: ${list[0].date!.hijri!.weekday!.ar!}');
+      // log('PtayerTimesCount: ${list.length}');
+
+      // await NotificationService().showNotification(
+      //     title: 'Prayer Time', body: '', id: 999);
+      prayerTimeBox = await Hive.openBox(PrayerTimeApiBloc.prayerTimeKey);
+
+      await prayerTimeBox.put(PrayerTimeApiBloc.prayerTimeKey, list);
+    }
   }
 }
 
@@ -667,5 +681,15 @@ class MyApp extends StatelessWidget {
         // });
       }),
     );
+  }
+
+}
+
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
   }
 }

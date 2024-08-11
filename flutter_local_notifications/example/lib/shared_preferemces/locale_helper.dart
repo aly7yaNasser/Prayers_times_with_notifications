@@ -21,7 +21,7 @@ class LocaleHelper {
       List<String> supportedLocales = ['ar', 'en'];
       String? deviceLocale = await Devicelocale.currentLocale;
         String? deviceLang = deviceLocale!.split('-')[0];
-        log('deviceLang: ${deviceLang!}');
+        // log('deviceLang: ${deviceLang!}');
         return deviceLang;
     }
   }

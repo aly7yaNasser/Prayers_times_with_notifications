@@ -35,6 +35,8 @@
   "prayer time has Came" : "حان وقت صلاة",
   "enable notification" : "الرجاء السماح لهذا التطبيق بإرسال الإشعارات",
   "enableAutoStart" : "يرجى تمكين ميزة'التشغيل التلقائي في الخلفية' لهذا التطبيق ليعمل بالشكل المطلوب",
-  "don't show again" : "لا تظهر مرة أخرى"
+  "i did it" : "لقد قمت بذلك مسبقاً",
+  "error while downloading the data!" : "خطأ أثناء تنزيل البيانات!",
+  "auto" : "تلقائي"
 
 }

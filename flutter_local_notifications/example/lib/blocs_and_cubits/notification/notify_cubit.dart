@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:bloc/bloc.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -30,7 +31,7 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
             notifyOption: NotifyChangedState.NOTIFY_DISABLED, init: true)) {}
 
   getSavedNotifyValue() async {
-    log('NotifSaved');
+    // log('NotifSaved');
 
     String notifyOption = await NotifHelper().getCachedNotification();
 
@@ -38,19 +39,19 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
   }
 
   NotifyValueChanged(String notifyOption, BuildContext? context) async {
-    log('notif changed');
+    // log('notif changed');
     try{
     await Workmanager().cancelAll();
     // .then((value) async {
-      log('notifStart cancelled');
-      log('notifStart notifyOption: ${notifyOption}');
+    //   log('notifStart cancelled');
+      // log('notifStart notifyOption: ${notifyOption}');
 
     await flutterLocalNotificationsPlugin.cancelAll();
 
 
     if (notifyOption == NotifyChangedState.NOTIFY_ENABLED) {
         bool isGranted = await Permission.notification.isGranted;
-        log('notifStart isGranted1: ${isGranted}');
+        // log('notifStart isGranted1: ${isGranted}');
 
         if (!isGranted) {
           // await PermissionService().requestPermission(Permission.notification);
@@ -59,7 +60,7 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
 
           await Permission.notification.request().then((value) async {
             isGranted = await Permission.notification.isGranted;
-            log('notifStart isGranted2: ${isGranted}');
+            // log('notifStart isGranted2: ${isGranted}');
 
             if (!isGranted) {
               if (context != null) {
@@ -80,12 +81,12 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
           });
         }
         if (isGranted) {
-          log('notifStart isGranted3: ${isGranted}');
+          // log('notifStart isGranted3: ${isGranted}');
           await runNotifications();
         }
       }
 
-      log('notifStart notifOption: ${notifyOption}');
+      // log('notifStart notifOption: ${notifyOption}');
 
       await NotifHelper().cacheNotification(notifyOption);
 
@@ -102,37 +103,30 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
 
   Future runNotifications() async {
     log('notif: enabled');
-    // Workmanager().registerOneOffTask(
-    //   "init",
-    //   'init',
-    //   initialDelay: Duration(seconds: 60),
-    //   // frequency: Duration(minutes: 16),
-    //   constraints: Constraints(
-    //       networkType: NetworkType.not_required,
-    //       requiresDeviceIdle: false,
-    //       requiresBatteryNotLow: false,
-    //       requiresStorageNotLow: false,
-    //       requiresCharging: false),
-    //   existingWorkPolicy: ExistingWorkPolicy.replace,
-    // );
-    Workmanager().registerOneOffTask(
-      "init",
-      'init',
-      initialDelay: Duration(seconds: 1),
-      // frequency: Duration(minutes: 16),
-      constraints: Constraints(
-          networkType: NetworkType.not_required,
-          requiresDeviceIdle: false,
-          requiresBatteryNotLow: false,
-          requiresStorageNotLow: false,
-          requiresCharging: false),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
-    );
 
-    log('notif: enabled FTER');
+
+
+        await Workmanager().registerOneOffTask(
+          "init00",
+          'init00',
+          initialDelay: Duration(seconds: 2),
+          // frequency: Duration(minutes: 16),
+          constraints: Constraints(
+              networkType: NetworkType.not_required,
+              requiresDeviceIdle: false,
+              requiresBatteryNotLow: false,
+              requiresStorageNotLow: false,
+              requiresCharging: false),
+          existingWorkPolicy: ExistingWorkPolicy.replace,
+        );
+
+
+      // }
+    // }
+    // log('notif: enabled FTER');
     // NotificationService().showNotification(
     //     title: 'Prayer Time', body: 'notifStat starts', id: 6);
-    log('notif:  FTER');
+    // log('notif:  FTER');
   }
 
 
@@ -166,4 +160,5 @@ class NotifyCubit extends Cubit<NotifyChangedState> {
     }
   }
 }
+
 

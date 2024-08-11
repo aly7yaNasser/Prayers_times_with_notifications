@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:clock/clock.dart';
 import 'package:timezone/timezone.dart';
 
@@ -9,6 +11,8 @@ void validateDateIsInTheFuture(
   TZDateTime scheduledDate,
   DateTimeComponents? matchDateTimeComponents,
 ) {
+  // log('tz6 starts');
+  // log("tz6 dateTime: ${scheduledDate.toString()}");
   if (matchDateTimeComponents != null) {
     return;
   }
@@ -16,4 +20,6 @@ void validateDateIsInTheFuture(
     throw ArgumentError.value(
         scheduledDate, 'scheduledDate', 'Must be a date in the future');
   }
+  // log('tz6 ends');
+
 }

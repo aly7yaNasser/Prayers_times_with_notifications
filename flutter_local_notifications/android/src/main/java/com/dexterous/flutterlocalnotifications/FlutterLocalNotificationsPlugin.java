@@ -1,6 +1,28 @@
 package com.dexterous.flutterlocalnotifications;
 
+
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Build;
+import android.os.IBinder;
+import android.provider.Settings;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+
+
 import static android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM;
+
+import android.util.Log;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -119,6 +141,7 @@ public class FlutterLocalNotificationsPlugin
         ActivityAware {
 
   static final String PAYLOAD = "payload";
+  static final String MILLISECONDS = "MILLISECONDS";
   static final String NOTIFICATION_ID = "notificationId";
   static final String CANCEL_NOTIFICATION = "cancelNotification";
 
@@ -155,6 +178,7 @@ public class FlutterLocalNotificationsPlugin
   private static final String CANCEL_METHOD = "cancel";
   private static final String CANCEL_ALL_METHOD = "cancelAll";
   private static final String ZONED_SCHEDULE_METHOD = "zonedSchedule";
+  private static final String RESCHEDULE_NOTIFICATIONS_METHOD = "rescheduleNotifications";
   private static final String PERIODICALLY_SHOW_METHOD = "periodicallyShow";
   private static final String GET_NOTIFICATION_APP_LAUNCH_DETAILS_METHOD =
       "getNotificationAppLaunchDetails";
@@ -208,22 +232,102 @@ public class FlutterLocalNotificationsPlugin
 
   private PermissionRequestProgress permissionRequestProgress = PermissionRequestProgress.None;
 
+  public static Notification NotifMe(Context context, String string, int id,NotificationDetails notificationDetails ) {
+    NotificationChannel notification = null;
+    NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            Log.v("DVIC?", "not S5");
+      notification = new NotificationChannel("3", string, NotificationManager.IMPORTANCE_HIGH);
+
+
+      notification.setDescription("string");
+      notification.setLockscreenVisibility(3);
+      notification.setName("stringapp_name");
+      notification.setSound(null, null);
+//      if (string == getString(R.string.pressToUpdate))
+//        notification.setDescription(string);
+//      else notification.setDescription(getString(R.string.dis));
+      notification.enableVibration(false);
+      manager.createNotificationChannel(notification);
+//      Intent cancelIntent = new Intent(this, CancelBrodcast.class);
+//      cancelIntent.setAction("Cancel");
+//      PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 4, cancelIntent, 0);
+//        Notification.Action action = new Notification.Action(R.drawable.icons8mosque48,getString(R.string.cancel),pendingIntent);
+
+      NotificationCompat.Builder notificationCompat = new NotificationCompat.Builder(context, "3");
+      Log.e("icon","1");
+      Log.e("icon",String.valueOf(getDrawableResourceId(context, notificationDetails.icon)));
+      Log.e("icon",notificationDetails.icon);
+//      notificationCompat.setLargeIcon(notificationDetails.icon);
+      Log.e("icon","2");
+      notificationCompat.setContentTitle("app_name)");
+      notificationCompat.setNotificationSilent();
+
+
+//        notificationCompat.addAction(new NotificationCompat.Action(R.drawable.ic_launcher_background,"can",pendingIntent));
+      notificationCompat.setContentText("string");
+      manager.createNotificationChannel(notification);
+      if (id != 010) {
+        manager.notify(id, notificationCompat.build());
+      }
+      return notificationCompat.build();
+//
+
+    } else {
+//            Log.v("DVIC?", " S5");
+
+//      Intent cancelIntent = new Intent(this, CancelBrodcast.class);
+//      cancelIntent.setAction("Cancel");
+//      PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 4, cancelIntent, 0);
+//        Notification.Action action = new Notification.Action(R.drawable.icons8mosque48,getString(R.string.cancel),pendingIntent);
+
+      NotificationCompat.Builder notificationCompat = new NotificationCompat.Builder(context, "3");
+      notificationCompat.setSmallIcon(getDrawableResourceId(context, notificationDetails.icon));
+      notificationCompat.setContentTitle("app_name)");
+      notificationCompat.setNotificationSilent();
+
+//        notificationCompat.addAction(new NotificationCompat.Action(R.drawable.ic_launcher_background,"can",pendingIntent));
+      notificationCompat.setContentText("string");
+      if (id != 010) {
+        manager.notify(id, notificationCompat.build());
+      }
+      return notificationCompat.build();
+
+    }
+  }
   static void rescheduleNotifications(Context context) {
+    Log.e("boot"," starts");
     ArrayList<NotificationDetails> scheduledNotifications = loadScheduledNotifications(context);
+    Log.e("boot", "count:" +String.valueOf(scheduledNotifications.size()));
     for (NotificationDetails notificationDetails : scheduledNotifications) {
       try {
         if (notificationDetails.repeatInterval != null) {
+//          Log.e("boot"," interval");
+
           repeatNotification(context, notificationDetails, false);
         } else if (notificationDetails.timeZoneName != null) {
-          zonedScheduleNotification(context, notificationDetails, false);
+//          Log.e("boot"," Zone1");
+
+          zonedScheduleNotification(context, notificationDetails, false,notificationDetails.millisecondsSinceEpoch);
+//          Log.e("boot"," Zone2");
+
         } else {
+//          Log.e("boot"," else");
+
           scheduleNotification(context, notificationDetails, false);
         }
       } catch (ExactAlarmPermissionException e) {
+        Log.e("boot"," catch "+e.getMessage());
+
         Log.e(TAG, e.getMessage());
         removeNotificationFromCache(context, notificationDetails.id);
       }
+//      Log.e("boot","ends");
+
     }
+    Log.e("boot","outOfLoop");
+
   }
 
   static void scheduleNextNotification(Context context, NotificationDetails notificationDetails) {
@@ -487,7 +591,7 @@ public class FlutterLocalNotificationsPlugin
     return gson;
   }
 
-  private static ArrayList<NotificationDetails> loadScheduledNotifications(Context context) {
+  public static ArrayList<NotificationDetails> loadScheduledNotifications(Context context) {
     ArrayList<NotificationDetails> scheduledNotifications = new ArrayList<>();
     SharedPreferences sharedPreferences =
         context.getSharedPreferences(SCHEDULED_NOTIFICATIONS, Context.MODE_PRIVATE);
@@ -562,26 +666,68 @@ public class FlutterLocalNotificationsPlugin
   private static void zonedScheduleNotification(
       Context context,
       final NotificationDetails notificationDetails,
-      Boolean updateScheduledNotificationsCache) {
-    Gson gson = buildGson();
-    String notificationDetailsJson = gson.toJson(notificationDetails);
-    Intent notificationIntent = new Intent(context, ScheduledNotificationReceiver.class);
-    notificationIntent.putExtra(NOTIFICATION_DETAILS, notificationDetailsJson);
-    PendingIntent pendingIntent =
-        getBroadcastPendingIntent(context, notificationDetails.id, notificationIntent);
-    AlarmManager alarmManager = getAlarmManager(context);
-    long epochMilli =
-        ZonedDateTime.of(
-                LocalDateTime.parse(notificationDetails.scheduledDateTime),
-                ZoneId.of(notificationDetails.timeZoneName))
-            .toInstant()
-            .toEpochMilli();
+      boolean updateScheduledNotificationsCache,
+      @Nullable long milliSeconds
+      ) {
+    try {
+//      Log.e("zone","starts");
+      Gson gson = buildGson();
+//      Log.e("zone","1");
 
-    setupAlarm(notificationDetails, alarmManager, epochMilli, pendingIntent);
+      String notificationDetailsJson = gson.toJson(notificationDetails);
+//      Log.e("zone","2");
 
-    if (updateScheduledNotificationsCache) {
-      saveScheduledNotification(context, notificationDetails);
+      Intent notificationIntent = new Intent(context, ScheduledNotificationReceiver.class);
+//      Log.e("zone","3");
+
+      notificationIntent.putExtra(NOTIFICATION_DETAILS, notificationDetailsJson);
+      PendingIntent pendingIntent =
+              getBroadcastPendingIntent(context, notificationDetails.id, notificationIntent);
+//      Log.e("zone","4");
+
+      AlarmManager alarmManager = getAlarmManager(context);
+//      Log.e("zone","5");
+
+//    Log.d("milliSeconds1",String.valueOf(milliSeconds));
+//    Log.d("milliSeconds2: ", notificationDetails.scheduledDateTime.toString());
+      if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
+        // Do something for lollipop and above versions
+        long epochMilli =
+                ZonedDateTime.of(
+                                LocalDateTime.parse(notificationDetails.scheduledDateTime),
+                                ZoneId.of(notificationDetails.timeZoneName))
+                        .toInstant()
+                        .toEpochMilli();
+
+//      Log.d("time in Milli:1 ", String.valueOf(epochMilli));
+      }
+//    Log.d("time in Milli:2", String.valueOf(milliSeconds));
+
+
+//    Calendar calendar = Calendar.getInstance();
+//    calendar.set(2024,06,14,20,13);
+//    Log.e("newTime",String.valueOf(calendar.getTimeInMillis()));
+//      Log.e("zone","7");
+
+      setupAlarm(notificationDetails, alarmManager, milliSeconds, pendingIntent);
+//      Log.e("zone","8");
+
+      if (updateScheduledNotificationsCache) {
+        saveScheduledNotification(context, notificationDetails);
+      }
+//      Log.e("zone","9");
+//      NotifMe(context,"on Recive",9541,notificationDetails);
+//      NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+//      Notification notification = createNotification(context, notificationDetails);
+
+//      notificationManager.notify(444334, notification);
+//      Log.e("zone","10");
+
+
+    }catch (Exception e){
+      Log.e("catchInAnroid: ",e.getMessage()+",  " +e.toString());
     }
+//    Log.e("zone","finished");
   }
 
   private static void scheduleNextRepeatingNotification(
@@ -1252,7 +1398,7 @@ public class FlutterLocalNotificationsPlugin
       return;
     }
     notificationDetails.scheduledDateTime = nextFireDate;
-    zonedScheduleNotification(context, notificationDetails, true);
+    zonedScheduleNotification(context, notificationDetails, true,0000000000);
   }
 
   private static void zonedScheduleNextNotificationMatchingDateComponents(
@@ -1262,7 +1408,7 @@ public class FlutterLocalNotificationsPlugin
       return;
     }
     notificationDetails.scheduledDateTime = nextFireDate;
-    zonedScheduleNotification(context, notificationDetails, true);
+    zonedScheduleNotification(context, notificationDetails, true,0000000000);
   }
 
   private static String getNextFireDate(NotificationDetails notificationDetails) {
@@ -1282,6 +1428,8 @@ public class FlutterLocalNotificationsPlugin
 
   private static String getNextFireDateMatchingDateTimeComponents(
       NotificationDetails notificationDetails) {
+    Log.d("F","tz8 starts1");
+
     ZoneId zoneId = ZoneId.of(notificationDetails.timeZoneName);
     ZonedDateTime scheduledDateTime =
         ZonedDateTime.of(LocalDateTime.parse(notificationDetails.scheduledDateTime), zoneId);
@@ -1306,6 +1454,8 @@ public class FlutterLocalNotificationsPlugin
       while (nextFireDate.getDayOfWeek() != scheduledDateTime.getDayOfWeek()) {
         nextFireDate = nextFireDate.plusDays(1);
       }
+      Log.d("F","tz8 starts2");
+
       return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(nextFireDate);
     } else if (notificationDetails.matchDateTimeComponents
         == DateTimeComponents.DayOfMonthAndTime) {
@@ -1318,8 +1468,12 @@ public class FlutterLocalNotificationsPlugin
           || nextFireDate.getDayOfMonth() != scheduledDateTime.getDayOfMonth()) {
         nextFireDate = nextFireDate.plusDays(1);
       }
+      Log.d("F","tz8 starts2");
+
       return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(nextFireDate);
     }
+    Log.d("F","tz8 starts2");
+
     return null;
   }
 
@@ -1403,6 +1557,9 @@ public class FlutterLocalNotificationsPlugin
         break;
       case ZONED_SCHEDULE_METHOD:
         zonedSchedule(call, result);
+        break;
+      case RESCHEDULE_NOTIFICATIONS_METHOD:
+        rescheduleNotifications(applicationContext);
         break;
       case REQUEST_NOTIFICATIONS_PERMISSION_METHOD:
         requestNotificationsPermission(
@@ -1543,6 +1700,7 @@ public class FlutterLocalNotificationsPlugin
     NotificationDetails notificationDetails = extractNotificationDetails(result, call.arguments());
     if (notificationDetails != null) {
       try {
+
         repeatNotification(applicationContext, notificationDetails, true);
         result.success(null);
       } catch (PluginException e) {
@@ -1552,16 +1710,38 @@ public class FlutterLocalNotificationsPlugin
   }
 
   private void zonedSchedule(MethodCall call, Result result) {
+//    Log.d("F","tz7 starts");
     NotificationDetails notificationDetails = extractNotificationDetails(result, call.arguments());
+//    Log.d("F","tz7 starts1");
+    Map<String, Object> args = call.arguments();
+    long milliSeconds = (Long) args.get(MILLISECONDS);
+    Log.d("F","tz7 milli: "+String.valueOf(milliSeconds));
+
+//    Long milliSinceepco = (Long) args.get("millisecondsSinceEpoch");
+//    Log.d("F","tz7 milliSinceEpohc: "+String.valueOf(milliSinceepco));
+
+
     if (notificationDetails != null) {
       if (notificationDetails.matchDateTimeComponents != null) {
+        Log.d("F","tz7 starts2");
+
         notificationDetails.scheduledDateTime =
             getNextFireDateMatchingDateTimeComponents(notificationDetails);
+        Log.d("F","tz7 starts3");
+
       }
       try {
-        zonedScheduleNotification(applicationContext, notificationDetails, true);
+//        Log.d("F","tz7 starts4");
+
+        zonedScheduleNotification(applicationContext, notificationDetails, true,milliSeconds);
+//        Log.d("F","tz7 starts5");
+
         result.success(null);
+//        Log.d("F","tz7 starts6");
+
       } catch (PluginException e) {
+        Log.d("F","tz7 catch");
+
         result.error(e.code, e.getMessage(), null);
       }
     }
@@ -1633,7 +1813,10 @@ public class FlutterLocalNotificationsPlugin
         || hasInvalidBigPictureResources(result, notificationDetails)
         || hasInvalidRawSoundResource(result, notificationDetails)
         || hasInvalidLedDetails(result, notificationDetails)) {
+      Log.e("icon","null");
       return null;
+    }else{
+      Log.e("icon","not null");
     }
 
     return notificationDetails;

@@ -4,7 +4,7 @@ part of 'prayer_time_api_bloc.dart';
 abstract class PrayerTimeApiEvent {}
 
 class GetPrayerTimesEvent extends PrayerTimeApiEvent{
-  String country,city;
+  String? country,city;
   int year;
   GetPrayerTimesEvent({required this.country, required this.city, required this.year});
 }

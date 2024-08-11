@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications_linux/flutter_local_notifications_linux.dart';
@@ -336,7 +337,9 @@ class FlutterLocalNotificationsPlugin {
     String? title,
     String? body,
     TZDateTime scheduledDate,
+    int milliSeconds,
     NotificationDetails notificationDetails, {
+
     required UILocalNotificationDateInterpretation
         uiLocalNotificationDateInterpretation,
     @Deprecated('Deprecated in favor of the androidScheduleMode parameter')
@@ -345,6 +348,9 @@ class FlutterLocalNotificationsPlugin {
     String? payload,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
+    // log('tz4 starts');
+    // log('tz4 dateTime ${scheduledDate.toString()}');
+
     if (kIsWeb) {
       return;
     }
@@ -356,6 +362,7 @@ class FlutterLocalNotificationsPlugin {
               title,
               body,
               scheduledDate,
+              milliSeconds,
               notificationDetails.android,
               payload: payload,
               scheduleMode: _chooseScheduleMode(
@@ -365,7 +372,7 @@ class FlutterLocalNotificationsPlugin {
       await resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
           ?.zonedSchedule(
-              id, title, body, scheduledDate, notificationDetails.iOS,
+              id, title, body, scheduledDate,0, notificationDetails.iOS,
               uiLocalNotificationDateInterpretation:
                   uiLocalNotificationDateInterpretation,
               payload: payload,
@@ -374,12 +381,29 @@ class FlutterLocalNotificationsPlugin {
       await resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
           ?.zonedSchedule(
-              id, title, body, scheduledDate, notificationDetails.macOS,
+              id, title, body, scheduledDate,0, notificationDetails.macOS,
               payload: payload,
               matchDateTimeComponents: matchDateTimeComponents);
     } else {
       throw UnimplementedError('zonedSchedule() has not been implemented');
     }
+    // log('tz4 ends');
+
+  }
+
+
+  Future<void> reScheduleNotification() async {
+    log("boot before-1");
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()!
+          .reScheduleNotification();
+      log("boot finish-1");
+
+    }
+    log("boot finish-2");
+
   }
 
   /// Periodically show a notification using the specified interval.

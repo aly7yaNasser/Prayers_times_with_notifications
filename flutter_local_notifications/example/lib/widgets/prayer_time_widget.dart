@@ -23,13 +23,13 @@ class PrayerTimeWidget extends StatelessWidget{
     // double fontSize = style?.fontSize ?? defaultStyle?.fontSize;
     TextStyle textStyle = style?.textStyle ?? defaultStyle?.textStyle;
 
-    if(style != null) {
-      log('costum Style: no');
-      log('defulte Style: yes');
-    }else{
-      log('costum Style: no');
-      log('defulte Style: yes');
-    }
+    // if(style != null) {
+    //   log('costum Style: no');
+    //   log('defulte Style: yes');
+    // }else{
+    //   log('costum Style: no');
+    //   log('defulte Style: yes');
+    // }
 
     // return FutureBuilder(
       // builder: (BuildContext ctx, AsyncSnapshot<int> snapshot) {

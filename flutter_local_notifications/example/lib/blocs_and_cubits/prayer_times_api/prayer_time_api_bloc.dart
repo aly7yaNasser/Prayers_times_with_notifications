@@ -18,7 +18,7 @@ part 'prayer_time_api_state.dart';
 
 class PrayerTimeApiBloc extends Bloc<PrayerTimeApiEvent, PrayerTimeApiState> {
   static const prayerTimeKey = 'PRYERTIMES';
-  final String url_base = 'api.aladhan.com';
+  static const String url_base = 'api.aladhan.com';
   late String city;
   late String country;
   late String Year;
@@ -37,11 +37,21 @@ class PrayerTimeApiBloc extends Bloc<PrayerTimeApiEvent, PrayerTimeApiState> {
         // currentEvent.year;
         // country = 'Saudi Arabia';
         // city = 'Riyadh';
+        if(currentEvent.country != null) {
+          log('prayerTimesAPI test country: ${currentEvent.country}');
+        }
+        if(currentEvent.city != null) {
+          log('prayerTimesAPI test country: ${currentEvent
+              .country}, city: ${currentEvent.city}');
+        }
 
+
+        if(currentEvent.country != null && currentEvent.city != null) {
         PrayerTime? prayerTime = await getPrayerTimes(
-            country: currentEvent.country,
-            city: currentEvent.city,
+            country: currentEvent.country!,
+            city: currentEvent.city!,
             year: currentEvent.year);
+
         if (prayerTime != null) {
           log('prayerTimesAPI Date: ${prayerTime!.date!.readable}');
           emit(SuccessfulState(todayPrayerTime: prayerTime!));
@@ -51,7 +61,7 @@ class PrayerTimeApiBloc extends Bloc<PrayerTimeApiEvent, PrayerTimeApiState> {
           emit(ErrorState());
         }
       }
-      // }
+      }
     });
   }
 
@@ -59,7 +69,7 @@ class PrayerTimeApiBloc extends Bloc<PrayerTimeApiEvent, PrayerTimeApiState> {
       {required String country,
       required String city,
       required int year}) async {
-    log('year: ${year}, country: ${country}, city: ${city}');
+    log('getPrayerTimes year: ${year}, country: ${country}, city: ${city}');
     try {
       var url = Uri.https(url_base, 'v1/calendarByCity/${year}',
           {'method': '4', 'country': country, 'city': city});

@@ -1,10 +1,10 @@
  import 'dart:async';
 import 'dart:developer';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logger/logger.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../blocs_and_cubits/prayer_times_api/prayer_time_api_bloc.dart';
@@ -13,14 +13,11 @@ import '../models/prayer_time.dart';
 import '../services/notification_service.dart';
  import 'package:intl/intl.dart';
 
-class GeneralStatic {
+
+ class GeneralStatic {
    static bool isPrayertimeShown = false;
 
-   @pragma('vm:entry-point')
-   static FutureOr<dynamic> someFunction(String arg) {
-      print("Running in an isolate with argument : $arg");
-      return 1;
-   }
+
 
 
    static initHive() async {

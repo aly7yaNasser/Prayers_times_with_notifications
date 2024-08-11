@@ -27,7 +27,7 @@ public class NotificationDetails implements Serializable {
   private static final String TITLE = "title";
   private static final String BODY = "body";
   private static final String PAYLOAD = "payload";
-  private static final String MILLISECONDS_SINCE_EPOCH = "millisecondsSinceEpoch";
+   static final String MILLISECONDS_SINCE_EPOCH = "millisecondsSinceEpoch";
   private static final String CALLED_AT = "calledAt";
   private static final String REPEAT_INTERVAL = "repeatInterval";
   private static final String REPEAT_TIME = "repeatTime";

@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../main.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 
 import '../shared_preferemces/locale_helper.dart';
 part 'prayer_time.g.dart';
@@ -149,10 +150,10 @@ class PrayerTime {
   }
 
   Future<bool> scheduleNotifications ()async {
-    log('schedule 1');
+    // log('schedule 1');
 
     await _configureLocalTimeZone();
-    log('schedule 2');
+    // log('schedule 2');
 
     // await flutterLocalNotificationsPlugin.show(2, 'title', 'body',
     //     const NotificationDetails(
@@ -173,22 +174,22 @@ class PrayerTime {
 
     // await _showNotificationWithCustomTimestamp(currentTimeStamp+ (1000 * 60 *50));
 
-    log('CurrentMill for ${date!.readable}: ${currentTimeStamp}');
-    int ishaTimestampe = getTimeStampe(isha!) - currentTimeStamp;
-    int maghribTimestampe = getTimeStampe(maghrib!) - currentTimeStamp;
-    int asrTimestampe = getTimeStampe(asr!) - currentTimeStamp;
-    int dhuhrTimestampe = getTimeStampe(dhuhr!) - currentTimeStamp;
-    int fajrTimestampe = getTimeStampe(fajr!) - currentTimeStamp;
+    // log('CurrentMill for ${date!.readable}: ${currentTimeStamp}');
+    int ishaTimestampe = getTimeStampe(isha!) ;//- currentTimeStamp;
+    int maghribTimestampe = getTimeStampe(maghrib!);// - currentTimeStamp;
+    int asrTimestampe = getTimeStampe(asr!);// - currentTimeStamp;
+    int dhuhrTimestampe = getTimeStampe(dhuhr!);// - currentTimeStamp;
+    int fajrTimestampe = getTimeStampe(fajr!);// - currentTimeStamp;
 
-    log('ishaTimestampe: ${ishaTimestampe}');
-    log('maghribTimestampe: ${maghribTimestampe}');
-    log('asrTimestampe: ${asrTimestampe}');
-    log('dhuhrTimestampe: ${dhuhrTimestampe}');
-    log('fajrTimestampe: ${fajrTimestampe}');
-    log('schedule 3');
+    // log('ishaTimestampe: ${ishaTimestampe}');
+    // log('maghribTimestampe: ${maghribTimestampe}');
+    // log('asrTimestampe: ${asrTimestampe}');
+    // log('dhuhrTimestampe: ${dhuhrTimestampe}');
+    // log('fajrTimestampe: ${fajrTimestampe}');
+    // log('schedule 3');
 
     List<int> prayertimes = [ishaTimestampe, maghribTimestampe,asrTimestampe,dhuhrTimestampe,fajrTimestampe];
-    log('schedule 4');
+    // log('schedule 4');
 
     // await _zonedScheduleAlarmClockNotification(
     //     flutterLocalNotificationsPlugin, 60000,6);
@@ -196,19 +197,21 @@ class PrayerTime {
     // await _zonedScheduleAlarmClockNotification(
     //     flutterLocalNotificationsPlugin, 60000 * 7,7);
     int i = 0;
-    int dayNum = int.parse(date!.readable!.substring(1,3));// - (1000*60*60*15);
+    int dayNum = int.parse(date!.readable!.substring(1,2));// - (1000*60*60*15);
     while( i < prayertimes.length && 0 < prayertimes[i] ){
-      log('loop: ${i}');
+      // log('loop: ${i}');
        id = int.parse("$dayNum$i");// - (1000*60*60*15);
+      if (currentTimeStamp < prayertimes[i]) {
+        await _zonedScheduleAlarmClockNotification(
+            flutterLocalNotificationsPlugin, prayertimes[i], id);
 
-      await _zonedScheduleAlarmClockNotification(
-          flutterLocalNotificationsPlugin, prayertimes[i],id);
-
-      log('temp: ${prayertimes[i]}');
+        // log('temp: ${prayertimes[i]}');
+        returnValue = true;
+      }
       i++;
-      returnValue = true;
+
     }
-    log('schedule 5');
+    // log('schedule 5');
 
     return returnValue;
   }
@@ -218,6 +221,7 @@ class PrayerTime {
         'scheduled title',
         'scheduled body',
         tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
+        0,
         const NotificationDetails(
             android: AndroidNotificationDetails(
                 'your channel id', 'your channel name',
@@ -234,19 +238,39 @@ class PrayerTime {
       int milliSeconds,
       int id
       ) async {
-    log('tz zone: ${tz.local.currentTimeZone}');
-    log('tz city: ${tz.local.name}');
-    log('tz duration: ${tz.TZDateTime.now(tz.local).add( Duration(milliseconds: milliSeconds))}');
 
+    try{
+      // Future rescheduleFuture= flutterLocalNotificationsPlugin.reScheduleNotification();
+      //
+      // rescheduleFuture.then((onValue){
+      // log("boot Future then");
+      // });
+      // rescheduleFuture.timeout(Duration(seconds: 10),onTimeout: (){
+      //   log("boot Future then");
+      //
+      // });
+      // rescheduleFuture.whenComplete((){
+      //   log("boot Future Completed");
+      // });
+
+      int currentTimeStamp = DateTime.now().millisecondsSinceEpoch;// - (1000*60*60*15);
+
+
+    // log('tz zone: ${tz.local.currentTimeZone}');
+    // log('tz city: ${tz.local.name}');
+    // log('tz duration: ${tz.TZDateTime.now(tz.local).add( Duration(milliseconds: milliSeconds))}');
+      DateTime dateTime = DateTime.fromMillisecondsSinceEpoch(milliSeconds);
+      String formattedDate = DateFormat('kk:mm:ss \n EEE d MMM').format(dateTime);
     String lang = await LocaleHelper().getCachedLanguageCode();
-      String body = lang == 'en' ? 'Allah akbar' : 'ألله أكبر';
+      String body = lang == 'en' ? 'Allah akbar' : 'ألله أكبر ';
       String title = lang == 'en' ? 'Prayer Times' : 'أوقات الصلاة';
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
         title,
         body,
-        tz.TZDateTime.now(tz.local).add( Duration(milliseconds: milliSeconds)),
+        tz.TZDateTime.now(tz.local).add( Duration(milliseconds: milliSeconds-currentTimeStamp )),
+      milliSeconds,
         const NotificationDetails(
             android: AndroidNotificationDetails(
                 'alarm_clock_channel', 'Alarm Clock Channel',
@@ -260,41 +284,44 @@ class PrayerTime {
         uiLocalNotificationDateInterpretation:
         UILocalNotificationDateInterpretation.absoluteTime,
     );
+    }catch(e){
+      log('schedlue catch: $e');
+    }
   }
 
   Future<void> _configureLocalTimeZone() async {
-    log('tz init');
+    // log('tz init');
     tz.initializeTimeZones();
-    log('tz init1');
+    // log('tz init1');
     final String? timeZoneName = await FlutterTimezone.getLocalTimezone();
-    log('tz init2');
+    // log('tz init2');
     tz.setLocalLocation(tz.getLocation(timeZoneName!));
-    log('tz init3');
+    // log('tz init3');
   }
 
   Future<int?> getNextPrayerTime ()async {
     int currentTimeStamp = DateTime.now().millisecondsSinceEpoch;// - (1000*60*60*15);
-    log('CurrentMill for ${date!.readable}: ${currentTimeStamp}');
+    // log('CurrentMill for ${date!.readable}: ${currentTimeStamp}');
     int ishaTimestampe = getTimeStampe(isha!);
     int maghribTimestampe = getTimeStampe(maghrib!);
     int asrTimestampe = getTimeStampe(asr!);
     int dhuhrTimestampe = getTimeStampe(dhuhr!);
     int fajrTimestampe = getTimeStampe(fajr!);
 
-    log('ishaTimestampe: ${ishaTimestampe}');
-    log('maghribTimestampe: ${maghribTimestampe}');
-    log('asrTimestampe: ${asrTimestampe}');
-    log('dhuhrTimestampe: ${dhuhrTimestampe}');
-    log('fajrTimestampe: ${fajrTimestampe}');
+    // log('ishaTimestampe: ${ishaTimestampe}');
+    // log('maghribTimestampe: ${maghribTimestampe}');
+    // log('asrTimestampe: ${asrTimestampe}');
+    // log('dhuhrTimestampe: ${dhuhrTimestampe}');
+    // log('fajrTimestampe: ${fajrTimestampe}');
 
     List<int> prayertimes = [ishaTimestampe, maghribTimestampe,asrTimestampe,dhuhrTimestampe,fajrTimestampe];
 
     int i = 0;
     while( i < prayertimes.length && currentTimeStamp < prayertimes[i] ){
-log('loop: ${i}');
+// log('loop: ${i}');
 
 
-log('temp: ${prayertimes[i]}');
+// log('temp: ${prayertimes[i]}');
 i++;
     }
     i = i-1;
@@ -318,10 +345,10 @@ i++;
 
     // String dateReadable = date!.gregorian!.year!+'-'+date!.gregorian!.month!._number.toString()+'-'+ date!.gregorian!.day!;
     String dateReadable = date!.gregorian!.year!+'-'+currentMonth+'-'+ date!.gregorian!.day!;
-    log('getTimeStampe: ${dateReadable} '+ time+':00');
+    // log('getTimeStampe: ${dateReadable} '+ time+':00');
     // DateTime dateTime = DateTime.parse(dateReadable+' '+ time+':00');
     DateTime dateTime = DateTime.parse('$dateReadable $time:00');
-    log('getTimeStampe DateTime: ${dateTime.year}/${dateTime.month}/${dateTime.day} ${dateTime.hour}:${dateTime.minute}');
+    // log('getTimeStampe DateTime: ${dateTime.year}/${dateTime.month}/${dateTime.day} ${dateTime.hour}:${dateTime.minute}');
 
 
     return dateTime.millisecondsSinceEpoch;

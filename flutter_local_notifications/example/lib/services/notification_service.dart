@@ -92,6 +92,7 @@ class NotificationService {
         title,
         body,
         tz.TZDateTime.now(tz.local).add( Duration(milliseconds: duration)),
+        duration,
         await notificationDetailsWithAdhan(),
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime);

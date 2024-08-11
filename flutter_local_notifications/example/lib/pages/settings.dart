@@ -19,8 +19,10 @@ import 'package:workmanager/workmanager.dart';
 
 import '../blocs_and_cubits/locale_cubit/locale_cubit.dart';
 import '../main.dart';
+import '../pages/main.dart';
 import '../services/scheduler_service.dart';
 import '../shared_preferemces/is_first_helper.dart';
+
 
 class PaddedElevatedButton extends StatelessWidget {
   const PaddedElevatedButton({
@@ -45,27 +47,9 @@ class PaddedElevatedButton extends StatelessWidget {
   class SettingsPage extends StatelessWidget{
   BuildContext? context;
 
+ SettingsPage(){
 
-  Future<void> _checkPendingNotificationRequests() async {
-    final List<PendingNotificationRequest> pendingNotificationRequests =
-    await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-    return showDialog<void>(
-      context: context!,
-      builder: (BuildContext context) => AlertDialog(
-        content: Text('${pendingNotificationRequests.length} pending notification '
-            'requests'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
+ }
   @override
   void dispose() {
     Fluttertoast.showToast(msg: 'msg');
@@ -80,6 +64,8 @@ class PaddedElevatedButton extends StatelessWidget {
   Widget build(BuildContext context) {
 
     this.context = context;
+    WidgetsBinding.instance.addObserver(
+        LifecycleEventHandler(context: context, resumeCallBack: () async {}));
     // NotificationService().showNotification(title: 'Prayer Time', body: 'Allah akbar');
     List<String> notifItems = [
       NotifyChangedState.NOTIFY_ENABLED,
@@ -169,7 +155,7 @@ class PaddedElevatedButton extends StatelessWidget {
                                         child: BlocConsumer<LocalCubit,
                                             ChangedLocalState>(
                                           listener: (context, state) {
-                                            Navigator.of(context).pop();
+                                            // Navigator.of(context).pop();
                                           },
                                           builder: (context, state) {
                                             return DropdownButton(
@@ -220,7 +206,7 @@ class PaddedElevatedButton extends StatelessWidget {
                                         child: BlocConsumer<TimeFormatCubit,
                                             TimeFormatChangedState>(
                                           listener: (context, state) {
-                                            Navigator.of(context).pop();
+                                            // Navigator.of(context).pop();
                                           },
                                           builder: (context, state) {
                                             return DropdownButton(
@@ -270,13 +256,13 @@ class PaddedElevatedButton extends StatelessWidget {
                                         child: BlocConsumer<ThemeModeCubit,
                                             ThemeModeChangedState>(
                                           listener: (context, state) {
-                                            Navigator.of(context).pop();
+                                            // Navigator.of(context).pop();
                                           },
                                           builder: (context, state) {
                                             return DropdownButton(
                                                 underline: SizedBox(),
                                                 value: state.theme,
-                                                items: ['light', 'dark']
+                                                items: ['auto', 'light', 'dark']
                                                     .map((String items) {
                                                   return DropdownMenuItem<
                                                       String>(
@@ -318,7 +304,7 @@ class PaddedElevatedButton extends StatelessWidget {
                                         child: BlocConsumer<NotifyCubit,
                                             NotifyChangedState>(
                                           listener: (context, state) {
-                                            // Navigator.of(context).pop();
+                                            // // Navigator.of(context).pop();
                                           },
                                           builder: (context, state) {
                                             return DropdownButton(
@@ -463,6 +449,7 @@ class PaddedElevatedButton extends StatelessWidget {
         'scheduled alarm clock title 7',
         'scheduled alarm clock body 7',
         tz.TZDateTime.now(tz.local).add( Duration(minutes: time)),
+        time,
         const NotificationDetails(
             android: AndroidNotificationDetails('alarm_clock_channel', 'Alarm Clock Channel',
                 channelDescription: 'Alarm Clock Notification')),

@@ -31,6 +31,9 @@
   "prayer time has Came" : "prayer time has Came",
   "enable notification" : "Please enable the notification for this app",
   "enableAutoStart" : "Please enable 'Background auto start' feature for this app to work as expected",
-  "don't show again" : "Don't show again"
+  "i did it" : "I did it before",
+  "error while downloading the data!" : "error while downloading the data!",
+  "auto" : "auto"
+
 
 }

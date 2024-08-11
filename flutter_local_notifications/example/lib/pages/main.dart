@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'package:auto_start_flutter/auto_start_flutter.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +11,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:localization/localization.dart';
+import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications_example/blocs_and_cubits/Internet/internet_bloc.dart';
 import 'package:flutter_local_notifications_example/blocs_and_cubits/location/location_bloc.dart';
@@ -23,12 +26,11 @@ import 'package:flutter_local_notifications_example/widgets/prayer_time_widget.d
 import 'package:workmanager/workmanager.dart';
 
 import '../blocs_and_cubits/notification/notify_cubit.dart';
+import '../blocs_and_cubits/theme_mode/theme_mode_cubit.dart';
 import '../main.dart';
 import '../models/prayer_time.dart';
 import '../widgets/Prayer_times_and_date_widget.dart';
 import '../widgets/spinner.dart';
-import 'package:auto_start_flutter/auto_start_flutter.dart';
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -46,18 +48,18 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => MainPage();
 }
 
-class MainPage extends State<MyHomePage> {
+class MainPage extends State<MyHomePage>  {
   bool isFirst = true;
   final GeolocatorPlatform _geolocatorPlatform = GeolocatorPlatform.instance;
-  final StreamController<
-      ReceivedNotification> didReceiveLocalNotificationStream =
-  StreamController<ReceivedNotification>.broadcast();
+  final StreamController<ReceivedNotification>
+      didReceiveLocalNotificationStream =
+      StreamController<ReceivedNotification>.broadcast();
 
-  final StreamController<String?> selectNotificationStream = StreamController<
-      String?>.broadcast();
+  final StreamController<String?> selectNotificationStream =
+      StreamController<String?>.broadcast();
 
-  static const MethodChannel platform = MethodChannel(
-      'dexterx.dev/flutter_local_notifications_example');
+  static const MethodChannel platform =
+      MethodChannel('dexterx.dev/flutter_local_notifications_example');
 
   static const String portName = 'notification_send_port';
 
@@ -74,41 +76,41 @@ class MainPage extends State<MyHomePage> {
       bool? test = await isAutoStartAvailable;
       print(test);
       //if available then navigate to auto-start setting page.
-      if (test != null && test ) {
+      if (test != null && test) {
         String cashedAutoStart = await AutoStartHelper().getCachedAutoStart();
         log('autoStart: $cashedAutoStart');
         if (cashedAutoStart == AutoStartHelper.AUTOSTARTDISABLED) {
-          showDialog<void>(
+          await showDialog<void>(
+            barrierDismissible: false,
+            barrierColor: Color(0X10000000),
             context: context,
-            builder: (BuildContext context) =>
-                AlertDialog(
-                  content: Text('enableAutoStart'.tr(context)),
-                  actions: <Widget>[
-                    TextButton(
-                      onPressed: () {
-                        getAutoStartPermission();
-                        IsFirstHelper().cacheIsFirst(false);
+            builder: (BuildContext context) => AlertDialog(
+              content: Text('enableAutoStart'.tr(context)),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    getAutoStartPermission();
+                    IsFirstHelper().cacheIsFirst(false);
 
-                        log('isFirst onDispose Main: ${IsFirstHelper()
-                            .getCachedIsFirst()}');
+                    log('isFirst onDispose Main: ${IsFirstHelper().getCachedIsFirst()}');
 
-                        Navigator.of(context).pop();
-                      },
-                      child: Text('settings'.tr(context)),
-                    ),
-                    isFirst == false &&
-                        cashedAutoStart == AutoStartHelper.AUTOSTARTDISABLED ?
-                    TextButton(
-                      onPressed: () {
-                        AutoStartHelper().cacheAutoStart(
-                            AutoStartHelper.AUTOSTARTENABLED);
-                        Navigator.of(context).pop();
-                      },
-                      child: Text("don't show again".tr(context)),
-                    )
-                        : Text(''),
-                  ],
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('settings'.tr(context)),
                 ),
+                isFirst == false &&
+                        cashedAutoStart == AutoStartHelper.AUTOSTARTDISABLED
+                    ? TextButton(
+                        onPressed: () {
+                          AutoStartHelper()
+                              .cacheAutoStart(AutoStartHelper.AUTOSTARTENABLED);
+                          Navigator.of(context).pop();
+                        },
+                        child: Text("i did it".tr(context)),
+                      )
+                    : Text(''),
+              ],
+            ),
           );
         }
       }
@@ -117,56 +119,35 @@ class MainPage extends State<MyHomePage> {
     }
     if (!mounted) return;
   }
+
   void initialization() async {
-    Workmanager()
-        .initialize(callbackDispatcher, isInDebugMode: false);
     isFirst = await IsFirstHelper().getCachedIsFirst();
     log('isFirst: $isFirst');
     initAutoStart();
 
-    await _requestPermissions();
 
+
+
+    // });
+    Workmanager()
+        .initialize(callbackDispatcher, isInDebugMode: true)
+        .then((value) async {
+      Workmanager().cancelAll().then((value) async {
+        // await WidgetsFlutterBinding.ensureInitialized();
+
+        HttpOverrides.global = await MyHttpOverrides();
+
+      });
+    });
     FlutterNativeSplash.remove();
+
+
+    await _requestPermissions(); 
+
   }
 
-  void _configureDidReceiveLocalNotificationSubject() {
-    didReceiveLocalNotificationStream.stream
-        .listen((ReceivedNotification receivedNotification) async {
-      await showDialog(
-        context: context,
-        builder: (BuildContext context) =>
-            CupertinoAlertDialog(
-              title: receivedNotification.title != null ? Text(
-                  receivedNotification.title!) : null,
-              content: receivedNotification.body != null ? Text(
-                  receivedNotification.body!) : null,
-              actions: <Widget>[
-                CupertinoDialogAction(
-                  isDefaultAction: true,
-                  onPressed: () async {
-                    Navigator.of(context, rootNavigator: true).pop();
-                    await Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (BuildContext context) =>
-                            SecondPage(receivedNotification.payload),
-                      ),
-                    );
-                  },
-                  child: const Text('Ok'),
-                )
-              ],
-            ),
-      );
-    });
-  }
 
-  void _configureSelectNotificationSubject() {
-    selectNotificationStream.stream.listen((String? payload) async {
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (BuildContext context) => SecondPage(payload),
-      ));
-    });
-  }
+
 
   @override
   void dispose() {
@@ -188,28 +169,26 @@ class MainPage extends State<MyHomePage> {
     // await PermissionService().requestPermission(Permission.notification);
     // await Permission.notification.request();
     // });
-
   }
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addObserver(
+        LifecycleEventHandler(context:context, resumeCallBack: () async => setState(() {
+          // do something
+        }
+    )));
     PrayerTime prayerTime = PrayerTime();
-    bool isDark = Theme
-        .of(context)
-        .brightness == Brightness.dark;
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     PrayerTimeTextStyle? prayerTimeTextStyle =
-    Theme.of(context).extension<PrayerTimeTextStyle>();
+        Theme.of(context).extension<PrayerTimeTextStyle>();
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (contxt) =>
-        LocationBloc()
-          ..add(GetMyLocation())),
+        BlocProvider(create: (contxt) => LocationBloc()..add(GetMyLocation())),
         BlocProvider(create: (contxt) => PrayerTimeApiBloc()),
-
       ],
-
       child: Scaffold(
         appBar: AppBar(
           // TRY THIS: Try changing the color here to a specific color (to
@@ -234,237 +213,251 @@ class MainPage extends State<MyHomePage> {
         // ),
         body: BlocBuilder<InternetBloc, InternetState>(
             builder: (context, internetState) {
-              log('internetState: ${internetState.toString()}');
-              // return BlocBuilder<NotifyCubit, NotifyChangedState>(
-              //   builder: (context, notifState) {
-              return BlocBuilder<LocationBloc, LocationState>(
-                  builder: (context, locationState) {
-                    log('locationState running');
-                    if (locationState is LocationInitial) {
-                      log('locationState: Init');
-                      return Center(child: SpinnerWidget(message: ''));
-                    }
-                    if (locationState is LocationNotEnabledState) {
-                      log('locationState: LocationNotEnabledState');
+          log('internetState: ${internetState.toString()}');
+          // return BlocBuilder<NotifyCubit, NotifyChangedState>(
+          //   builder: (context, notifState) {
+          return BlocBuilder<LocationBloc, LocationState>(
+              builder: (context, locationState) {
+            log('locationState running');
+            if (locationState is LocationInitial) {
+              log('locationState: Init');
+              return Center(child: SpinnerWidget(message: ''));
+            }
+            if (locationState is LocationNotEnabledState) {
+              log('locationState: LocationNotEnabledState');
 
-                      return Center(
-                        child: Container(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.location_disabled,
-                                size: 100,
-                                color: Colors.deepOrange,
-                              ),
-                              Text(
-                                'Location Service not Enabled !'.tr(context),
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .bodyLarge,
-                              ),
-                            ],
+              return Center(
+                child: Container(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.location_disabled,
+                        size: 100,
+                        color: Colors.deepOrange,
+                      ),
+                      Text(
+                        'Location Service not Enabled !'.tr(context),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            } else if (locationState is LocationNotAllowedState) {
+              log('locationState: LocationNotAllowedState');
+
+              return Center(
+                child: Container(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.location_off_outlined,
+                        size: 100,
+                        color: Colors.deepOrange,
+                      ),
+                      Text(
+                        'Location permission not allowed !'.tr(context),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            } else if (locationState is LocationChangedState ||
+                locationState is LocationFoundDataState) {
+              String currentLocaleCode =
+                  Localizations.localeOf(context).toString();
+              if (locationState is LocationChangedState) {
+                // log('locationState: LocationChanged');
+                if (internetState is NotConnectedState) {
+                  return Center(
+                    child: Container(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_outlined,
+                            size: 100,
+                            color: Colors.deepOrange,
                           ),
+                          Text(
+                            'Check Internet Connection !'.tr(context),
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                log('location Found Date');
+              }
+              log("myLocEN : ${locationState.myLocationEN}");
+              log("myLocEN : country: ${locationState.country}, city:${locationState.city}");
+              log('check location');
+              if (locationState.myLocationEN != null) {
+                log('current locale: ${Localizations.localeOf(context)}');
+
+                if (isFirst) {
+                  isFirst = false;
+                  NotifyCubit().NotifyValueChanged(
+                      NotifyChangedState.NOTIFY_ENABLED, null);
+                }
+
+                return Container(
+                  // color: Colors.grey.shade50,
+                  height: MediaQuery.of(context).size.height,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 20,
                         ),
-                      );
-                    } else if (locationState is LocationNotAllowedState) {
-                      log('locationState: LocationNotAllowedState');
-
-                      return Center(
-                        child: Container(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.location_off_outlined,
-                                size: 100,
-                                color: Colors.deepOrange,
-                              ),
-                              Text(
-                                'Location permission not allowed !'.tr(context),
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .bodyLarge,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    } else if (locationState is LocationChangedState ||
-                        locationState is LocationFoundDataState) {
-                      String currentLocaleCode =
-                      Localizations.localeOf(context).toString();
-                      if (locationState is LocationChangedState) {
-                        log('locationState: LocationChanged');
-                        if (internetState is NotConnectedState) {
-                          return Center(
-                            child: Container(
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.warning_amber_outlined,
-                                    size: 100,
-                                    color: Colors.deepOrange,
-                                  ),
-                                  Text(
-                                    'Check Internet Connection !'.tr(context),
-                                    style: Theme
-                                        .of(context)
-                                        .textTheme
-                                        .bodyLarge,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                      } else {
-                        log('location Found Date');
-                      }
-                      log("myLocEN : ${locationState.myLocationEN}");
-                      log('check location');
-                      if (locationState.myLocationEN != null) {
-                        log('current locale: ${Localizations.localeOf(
-                            context)}');
-
-
-                        if (isFirst) {
-                          isFirst = false;
-                          NotifyCubit().NotifyValueChanged(
-                              NotifyChangedState.NOTIFY_ENABLED, null);
-                        }
-
-                        return Container(
-                          // color: Colors.grey.shade50,
-                          height: MediaQuery
-                              .of(context)
-                              .size
-                              .height,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
-                                  child: BlocBuilder<PrayerTimeApiBloc,
-                                      PrayerTimeApiState>(
-                                      builder: (context, prayerTimeState) {
-                                        if (locationState is LocationFoundDataState) {
-                                          prayerTime = locationState.prayerTime;
-                                        }
-                                        if (prayerTime.date == null &&
-                                            prayerTimeState is! SuccessfulState &&
-                                            prayerTimeState is! ErrorState) {
-                                          context.read<PrayerTimeApiBloc>().add(
-                                              GetPrayerTimesEvent(
-                                                  country: locationState
-                                                      .country!,
-                                                  city: locationState.city!,
-                                                  year: prayerTime.date == null
-                                                      ? DateTime
-                                                      .now()
-                                                      .year
-                                                      : DateTime
-                                                      .now()
-                                                      .year + 1));
-                                        } else
-                                        if (prayerTimeState is SuccessfulState) {
-                                          prayerTime =
-                                              prayerTimeState.todayPrayerTime;
-                                        }
-                                        // log('main page : prayertime date ${prayerTime.date!.readable}');
-                                        if (prayerTime.date != null) {
-                                          return PrayerTimesAndDateWidget(
-                                              prayerTime: prayerTime,
-                                              myLocationAR: locationState
-                                                  .myLocationAR!,
-                                              myLocationEN: locationState
-                                                  .myLocationEN!);
-                                        } else {
-                                          return Center(
-                                            child: SpinnerWidget(message: ''),
-                                          );
-                                        }
-                                      }),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      } else {
-                        return Center(
-                          child: Container(
-                            child: Column(children: [
-                              Icon(
-                                Icons.warning_amber_outlined,
-                                size: 100,
-                                color: Colors.deepOrange,
-                              ),
-                              Text(
-                                'error while getting your location!'.tr(
-                                    context),
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .bodyLarge,
-                              ),
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepOrange),
-                                  onPressed: () =>
-                                      context.read<LocationBloc>().add(
-                                          GetMyLocation()),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.refresh,
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
+                          child: BlocBuilder<PrayerTimeApiBloc,
+                                  PrayerTimeApiState>(
+                              builder: (context, prayerTimeState) {
+                            if (locationState is LocationFoundDataState) {
+                              prayerTime = locationState.prayerTime;
+                            }
+                            if (prayerTime.date == null &&
+                                prayerTimeState is! SuccessfulState &&
+                                prayerTimeState is! ErrorState) {
+                              context.read<PrayerTimeApiBloc>().add(
+                                  GetPrayerTimesEvent(
+                                      country: locationState.country!,
+                                      city: locationState.city!,
+                                      year: prayerTime.date == null
+                                          ? DateTime.now().year
+                                          : DateTime.now().year + 1));
+                            } else if (prayerTimeState is SuccessfulState) {
+                              prayerTime = prayerTimeState.todayPrayerTime;
+                            } else if (prayerTimeState is ErrorState) {
+                              return Center(
+                                child: Container(
+                                  child: Column(children: [
+                                    Icon(
+                                      Icons.warning_amber_outlined,
+                                      size: 100,
+                                      color: Colors.deepOrange,
+                                    ),
+                                    Text(
+                                      'error while downloading the data!'.tr(context),
+                                      style: Theme.of(context).textTheme.bodyLarge,
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.deepOrange),
+                                        onPressed: () =>
+                                            context.read<PrayerTimeApiBloc>().add(GetPrayerTimesEvent(
+                                                country: locationState.country!,
+                                                city: locationState.city!,
+                                                year: prayerTime.date == null
+                                                    ? DateTime.now().year
+                                                    : DateTime.now().year + 1)),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.refresh,
+                                            ),
+                                            Text(
+                                              'try again'.tr(context),
+                                            )
+                                          ],
+                                        ),
                                       ),
-                                      Text(
-                                        'try again'.tr(context),
-                                      )
-                                    ],
-                                  ),
+                                    ),
+                                  ]),
                                 ),
+                              );
+                            }
+                            // log('main page : prayertime date ${prayerTime.date!.readable}');
+                            if (prayerTime.date != null) {
+                              return PrayerTimesAndDateWidget(
+                                  prayerTime: prayerTime,
+                                  myLocationAR: locationState.myLocationAR!,
+                                  myLocationEN: locationState.myLocationEN!);
+                            } else {
+                              return Center(
+                                child: SpinnerWidget(message: ''),
+                              );
+                            }
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              } else {
+                return Center(
+                  child: Container(
+                    child: Column(children: [
+                      Icon(
+                        Icons.warning_amber_outlined,
+                        size: 100,
+                        color: Colors.deepOrange,
+                      ),
+                      Text(
+                        'error while getting your location!'.tr(context),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepOrange),
+                          onPressed: () =>
+                              context.read<LocationBloc>().add(GetMyLocation()),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.refresh,
                               ),
-                            ]),
+                              Text(
+                                'try again'.tr(context),
+                              )
+                            ],
                           ),
-                        );
-                      }
-                    }
-                    log('loc state not all');
-                    return Center(child: SpinnerWidget(message: ''));
-                  });
-              // });
-            }),
+                        ),
+                      ),
+                    ]),
+                  ),
+                );
+              }
+            }
+            log('loc state not all');
+            return Center(child: SpinnerWidget(message: ''));
+          });
+          // });
+        }),
       ),
     );
   }
 }
-  class ReceivedNotification {
+
+class ReceivedNotification {
   ReceivedNotification({
-  required this.id,
-  required this.title,
-  required this.body,
-  required this.payload,
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.payload,
   });
 
   final int id;
   final String? title;
   final String? body;
   final String? payload;
-  }
-
+}
 
 class SecondPage extends StatefulWidget {
   const SecondPage(
-      this.payload, {
-        Key? key,
-      }) : super(key: key);
+    this.payload, {
+    Key? key,
+  }) : super(key: key);
 
   static const String routeName = '/secondPage';
 
@@ -485,24 +478,24 @@ class SecondPageState extends State<SecondPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Second Screen'),
-    ),
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text('payload ${_payload ?? ''}'),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Go back!'),
+        appBar: AppBar(
+          title: const Text('Second Screen'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text('payload ${_payload ?? ''}'),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Go back!'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 enum PermissionStatus {
@@ -511,3 +504,42 @@ enum PermissionStatus {
   unknown,
   denied
 }
+
+
+class LifecycleEventHandler extends WidgetsBindingObserver {
+  final AsyncCallback? resumeCallBack;
+  final AsyncCallback? suspendingCallBack;
+  final BuildContext context;
+  LifecycleEventHandler( {
+    this.resumeCallBack,
+    this.suspendingCallBack,
+    required this.context
+  });
+
+  @override
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    print("state changed new ${state.name}");
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (resumeCallBack != null) {
+          await resumeCallBack!();
+
+          BlocProvider.of<
+              ThemeModeCubit>(
+              context)
+              .changedTheme('init');
+        }
+
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        if (suspendingCallBack != null) {
+          await suspendingCallBack!();
+        }
+        break;
+    }
+  }
+}
+

@@ -1,7 +1,7 @@
 name: flutter_local_notifications_example
 description: Demonstrates how to use the flutter_local_notifications plugin.
 publish_to: none
-
+version: 1.0.0+1
 dependencies:
   cupertino_icons: ^1.0.2
   flutter:
@@ -26,7 +26,11 @@ dependencies:
   flutter_native_splash: ^2.4.1
   devicelocale: ^0.7.0
   device_info_plus: ^9.1.0
+  #workmanager:
   workmanager:
+    git:
+      url: https://github.com/absar/flutter_workmanager.git
+      ref: ios-bg-tasks-enh-final
   logger: ^2.2.0
   auto_start_flutter: ^0.1.1
 

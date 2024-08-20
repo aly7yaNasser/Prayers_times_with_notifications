@@ -88,15 +88,15 @@ class LocationBloc extends Bloc<LocationEvent, LocationState>
   }
 
   Future<bool?> handleLocationPermission(bool? isisServiceEnabled) async {
-    // log('1');
+     log('1');
     emit(LocationInitial());
     bool s = await showStoredPrayertimes();
     if (s) {
       GeneralStatic.isPrayertimeShown = true;
 
-      // log('2,true');
+       log('2,true');
     } else {
-      // log('2,false');
+       log('2,false');
 
       if (isisServiceEnabled != null) {
         isServiceEnabled = isisServiceEnabled;
@@ -104,33 +104,33 @@ class LocationBloc extends Bloc<LocationEvent, LocationState>
         isServiceEnabled = await _geolocatorPlatform.isLocationServiceEnabled();
       }
 
-      // log('handle Per : Loc Ser = ${isServiceEnabled.toString()}');
+       log('handle Per : Loc Ser = ${isServiceEnabled.toString()}');
 
       permission = await _geolocatorPlatform.checkPermission();
-      // log('handle Per : Loc Per = ${permission.toString()}');
-      // log('3');
+       log('handle Per : Loc Per = ${permission.toString()}');
+       log('3');
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever ||
           permission == null) {
-        // await _geolocatorPlatform.requestPermission();
+         await _geolocatorPlatform.requestPermission();
 
         permission = await _geolocatorPlatform.checkPermission();
 
-        // log('handle Per : per = ${permission.toString()}');
+        log('handle Per : per = ${permission.toString()}');
       }
-      // log('4');
+       log('4');
 
       if (!isServiceEnabled) {
-        // log('Services Not enabled');
+         log('Services Not enabled');
         emit(LocationNotEnabledState());
       } else if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        // log('Location Per not Enabled');
+        log('Location Per not Enabled');
         isLocationPermission = false;
         emit(LocationNotAllowedState());
       } else {
-        // log('befor getting Location time:${DateTime.now().millisecondsSinceEpoch}');
+        //log('befor getting Location time:${DateTime.now().millisecondsSinceEpoch}');
         getLocation().then((value) async {
           // log('af getting Location time:${DateTime.now().millisecondsSinceEpoch}');
           bool b = await value;

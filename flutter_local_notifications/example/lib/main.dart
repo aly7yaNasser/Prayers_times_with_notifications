@@ -196,6 +196,8 @@ void callbackDispatcher() {
   Workmanager()
       .executeTask((String task, Map<String, dynamic>? inputdata) async {
     try {
+      log('1');
+
       String lunchTime = DateFormat('hh:mm:ss').format(DateTime.now());
 
      await initNotificatin();
@@ -207,17 +209,21 @@ void callbackDispatcher() {
       // String formattedDate = DateFormat('kk:mm:ss \n EEE d MMM').format(now);
       // await NotificationService().showNotification(
       //     title: 'Prayer Time', body: ' $task $formattedDate', id: 11);
+      log('2');
 
       await initHive();
 
       log('task');
       await schedulePTs();
+      log('3');
 
       var prayerTimeBox = await Hive.openBox(PrayerTimeApiBloc.prayerTimeKey);
       List boxList = [];
       List<PrayerTime> prayerTimes = [
         // PrayerTime(date: Date(readable: 'hhh'))
       ];
+      log('4');
+
       boxList = await (prayerTimeBox
           .get(PrayerTimeApiBloc.prayerTimeKey, defaultValue: []));
       // log('test boxList Empty length ${boxList.length}');
@@ -225,6 +231,7 @@ void callbackDispatcher() {
       prayerTimes = List<PrayerTime>.from(boxList);
       // log('text Box : date ${prayerTimes[0].date!.readable}');
       // log('test not Empty length ${prayerTimes.length}');
+      log('5');
 
       // prayerTimes.addAll(prayerTimes);
       if (prayerTimes.length < 60) {
@@ -313,16 +320,16 @@ void main() async {
     FlutterNativeSplash.remove();
 
   // });
-  Workmanager()
-      .initialize(callbackDispatcher, isInDebugMode: true)
-      .then((value) async {
-    Workmanager().cancelAll().then((value) async {
+ // Workmanager()
+    //  .initialize(callbackDispatcher, isInDebugMode: true)
+     // .then((value) async {
+  //  Workmanager().cancelAll().then((value) async {
       // await WidgetsFlutterBinding.ensureInitialized();
 
       HttpOverrides.global = await MyHttpOverrides();
 
-    });
-  });
+   // });
+ // });
   await initHive();
 
 
@@ -491,6 +498,7 @@ initNotificatin() async{
 
 
 Future schedulePTs() async {
+  log('1');
   var prayerTimeBox = await Hive.openBox(PrayerTimeApiBloc.prayerTimeKey);
   List boxList = [];
   List<PrayerTime> prayerTimes = [];
@@ -545,9 +553,9 @@ Future schedulePTs() async {
       // log('isScheduled 3: $isScheduled');
     }
 
-    List<PendingNotificationRequest> pendignList = await NotificationService()
-        .notificationsPlugin
-        .pendingNotificationRequests();
+   // List<PendingNotificationRequest> pendignList = await NotificationService()
+      //  .notificationsPlugin
+      //  .pendingNotificationRequests();
 
     // await NotificationService().showNotification(
     //     title: 'Prayer Time', body: 'Count ${pendignList.length}', id: 505);
@@ -555,7 +563,7 @@ Future schedulePTs() async {
 
 
   }
-
+log('2');
 }
 
 Future loadNextYear() async {
